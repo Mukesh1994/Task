@@ -1,4 +1,4 @@
-package com.example.admin.Task.Services;
+package com.example.admin.Task.services;
 
 /**
  * Created by ADMIN on 01-08-2016.
@@ -344,7 +344,7 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
 
         // The final argument to {@code requestLocationUpdates()} is a LocationListener
         // (http://developer.android.com/reference/com/google/android/gms/location/LocationListener.html).
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, (com.google.android.gms.location.LocationListener) this);
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 
     @Override

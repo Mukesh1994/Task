@@ -7,11 +7,11 @@
          Google Maps Android API v2, but you must specify either coarse or fine
          location permissions for the 'MyLocation' functionality.
     -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
-    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"/>
-
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
              The API key for Google Maps-based APIs is defined as a string resource.
@@ -20,10 +20,7 @@
              You need a different API key for each encryption key, including the release key that is used to
              sign the APK for publishing.
              You can define the keys for the debug and release targets in src/debug/ and src/release/.
-        -->
-
-
-
+    -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -36,11 +33,12 @@
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!--android:name="android.support.multidex.MultiDexApplication">-->
+        <!-- android:name="android.support.multidex.MultiDexApplication"> -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw" />
@@ -49,9 +47,11 @@
             android:value="@integer/google_play_services_version" />
 
         <service
-            android:name=".Services.LocationService"
+            android:name=".services.LocationService"
             android:enabled="true"
             android:exported="false" />
+
+        <activity android:name=".activities.DrawPath"></activity>
     </application>
 
 </manifest>

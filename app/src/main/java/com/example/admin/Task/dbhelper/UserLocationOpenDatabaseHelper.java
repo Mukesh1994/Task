@@ -69,6 +69,10 @@ public class UserLocationOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
      * @return
      * @throws SQLException
      */
+
+    //lconDao = getDao(UserLocation.class);
+
+
     public Dao<UserLocation, Long> getDao() throws SQLException {
 
         if (locnDao == null) {

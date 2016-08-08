@@ -9,6 +9,8 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -16,19 +18,27 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.example.admin.Task.R;
-import com.example.admin.Task.Services.LocationService;
+import com.example.admin.Task.adapter.RestrosAdapter;
 import com.example.admin.Task.apimodel.RestaurantsResponse;
-//import com.example.admin.Task.apimodel.User;
+import com.example.admin.Task.apimodel.Result;
 import com.example.admin.Task.rest.ApiClient;
 import com.example.admin.Task.rest.ApiInterface;
+import com.example.admin.Task.services.LocationService;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+//import com.example.admin.Task.apimodel.User;
+
 public class MainActivity extends AppCompatActivity {
 
     public int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION;
+    public RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,25 +74,69 @@ public class MainActivity extends AppCompatActivity {
                 Intent S = new Intent(getApplicationContext(), LocationService.class);
                 startService(S);
         }
+
+        recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        getNearbyRestros();
+
+
 //
-        ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
+////
+//        Button clickme=(Button)findViewById(R.id.clickme);
+//        clickme.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                something();
+//            }
+//        });
+
        // String userName = "mukesh1994";
        //   String locn = "56.6,65&radi" ;
-        //location=51.503186,-0.126446&radius=5000&type=museum&key=YOUR_API_KEY
-        String location = "51.503186,-0.126446";
+        // String x = "location=51.503186,-0.126446&radius=5000&type=museum&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
+        //https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
+
+
+    }
+
+    public void getNearbyRestros() {
+
+        String location = "19.1032825,72.8485374";
         int radius = 5000;
-        String type = "museum";
+        String type = "restaurant";
         String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
-        Call<RestaurantsResponse> call = apiService.getNearByRestros(location,radius,type,key);
+        Map<String, String> data = new HashMap<>();
+
+        data.put("location", location);
+        data.put("radius", String.valueOf(radius));
+        data.put("type", type);
+        data.put("key", key);
+        ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
+
+        Call<RestaurantsResponse> call = apiService.getNearByRestros(data);
         call.enqueue(new Callback<RestaurantsResponse>() {
             @Override
             public void onResponse(Call<RestaurantsResponse> call, Response<RestaurantsResponse> response) {
-                 String name  = response.body().getStatus();
+                if (response.isSuccessful()) {
+                    int statusCode = response.code();
+                    List<Result> restros = response.body().getResults();
+                    recyclerView.setAdapter(new RestrosAdapter(restros, R.layout.list_item_restro, getApplicationContext()));
+                } else {
+                    Log.d("Response : ", response.toString());
+                    Log.d("res", call.toString());
+
+                    //   Log.d("res",call.)
+
+                    //Log.d("res",call.execute());
+                }
+//                 List<Result> restros = .body().getResults();
+//                 String name = restros.get(0).getName();
+                //RestaurantsResponse response1  = response.body();
+                //List<MediaBrowserServiceCompat.Result> res = response1.getResults();
 //                 String company = response.body().getCompany();
 //                 String location = response.body().getLocation();
 //                 int totalrepos = response.body().getPublicRepos();
-                 String res = "Name: " + name ;
-                 Log.d("Response:",res);
+                //String res = "Name: " + name ;
+                //Log.d("Response:",res);
             }
 
             @Override
@@ -92,9 +146,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
     }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.

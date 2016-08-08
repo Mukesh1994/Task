@@ -11,7 +11,7 @@ public class ApiClient {
 
     //https://maps.googleapis.com/maps/api/place/nearbysearch/output?parameters
 
-    public static final String BASE_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/";
+    public static final String BASE_URL = "https://maps.googleapis.com";
     private static Retrofit retrofit = null ;
 
     public static Retrofit getClient() {
