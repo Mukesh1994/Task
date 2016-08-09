@@ -9,7 +9,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -59,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         boolean toinitiateservice = false ;
 
 
+
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
@@ -70,14 +70,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+
         if(toinitiateservice){
                 Intent S = new Intent(getApplicationContext(), LocationService.class);
                 startService(S);
         }
 
-        recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        getNearbyRestros();
+        Intent I = new Intent(MainActivity.this, DrawPath.class);
+        startActivity(I);
+
+        //       recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
+        //       recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        //       showNearbyRestros();
 
 
 //
@@ -98,20 +103,18 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void getNearbyRestros() {
+    public void showNearbyRestros() {
 
         String location = "19.1032825,72.8485374";
         int radius = 5000;
         String type = "restaurant";
         String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
         Map<String, String> data = new HashMap<>();
-
         data.put("location", location);
         data.put("radius", String.valueOf(radius));
         data.put("type", type);
         data.put("key", key);
         ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
-
         Call<RestaurantsResponse> call = apiService.getNearByRestros(data);
         call.enqueue(new Callback<RestaurantsResponse>() {
             @Override
@@ -121,12 +124,13 @@ public class MainActivity extends AppCompatActivity {
                     List<Result> restros = response.body().getResults();
                     recyclerView.setAdapter(new RestrosAdapter(restros, R.layout.list_item_restro, getApplicationContext()));
                 } else {
+
                     Log.d("Response : ", response.toString());
                     Log.d("res", call.toString());
 
                     //   Log.d("res",call.)
-
                     //Log.d("res",call.execute());
+
                 }
 //                 List<Result> restros = .body().getResults();
 //                 String name = restros.get(0).getName();
@@ -137,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
 //                 int totalrepos = response.body().getPublicRepos();
                 //String res = "Name: " + name ;
                 //Log.d("Response:",res);
+
             }
 
             @Override
