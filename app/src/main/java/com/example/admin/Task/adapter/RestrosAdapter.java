@@ -1,6 +1,7 @@
 package com.example.admin.Task.adapter;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.example.admin.Task.R;
+import com.example.admin.Task.activities.DrawPath;
 import com.example.admin.Task.apimodel.Result;
 
 import java.util.List;
@@ -17,15 +19,20 @@ import java.util.List;
  * Created by ADMIN on 08-08-2016.
  */
 public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroViewHolder> {
-    private List<Result> restros;
-    private int rowLayout;
-    private Context context;
+    private static List<Result> restros;
+    private static int rowLayout;
+    private static Context context;
+    private static double currntLatitude;
+    private static double currntLongitude;
 
 
-    public RestrosAdapter(List<Result> restros, int rowLayout, Context context) {
+    public RestrosAdapter(List<Result> restros, double currntLatitude, double currntLongitude, int rowLayout, Context context) {
+
         this.restros = restros;
         this.rowLayout = rowLayout;
         this.context = context;
+        this.currntLatitude = currntLatitude;
+        this.currntLongitude = currntLongitude;
     }
 
     @Override
@@ -48,7 +55,7 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
         return restros.size();
     }
 
-    public static class RestroViewHolder extends RecyclerView.ViewHolder {
+    public static class RestroViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         LinearLayout restroLayout;
         TextView restroTitle;
         TextView data;
@@ -63,6 +70,17 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
             data = (TextView) v.findViewById(R.id.subtitle);
             restroDescription = (TextView) v.findViewById(R.id.description);
             rating = (TextView) v.findViewById(R.id.rating);
+        }
+
+        @Override
+        public void onClick(View v) {
+
+            Intent intent = new Intent(context, DrawPath.class);
+            String source = currntLatitude + "," + currntLongitude;
+            String destn = restros.get(getPosition()).getGeometry().getLocation().getLat() + "," + restros.get(getPosition()).getGeometry().getLocation().getLng();
+            intent.putExtra("source", source);
+            intent.putExtra("destn", destn);
+            context.startActivity(intent);
         }
     }
 }

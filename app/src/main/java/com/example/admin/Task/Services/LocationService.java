@@ -1,22 +1,18 @@
+// serviceIntent to get the current location
 package com.example.admin.Task.services;
-
 /**
  * Created by ADMIN on 01-08-2016.
  */
 
 import android.Manifest;
-import android.app.Service;
+import android.app.IntentService;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
-import com.example.admin.Task.dbhelper.UserLocationOpenDatabaseHelper;
-import com.example.admin.Task.dbmodel.UserLocation;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.ActivityRecognition;
@@ -25,24 +21,17 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.j256.ormlite.dao.Dao;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 
 
-public class LocationService extends Service implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
+
+public class LocationService extends IntentService implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     /**
      * The desired interval for location updates. Inexact. Updates may be more or less frequent.
      */
     public final long UPDATE_INTERVAL_IN_MILLISECONDS = 6000;
-
+    public final int STATUS_FINISHED = 1;
     /**
      * The fastest rate for active location updates. Exact. Updates will never be more frequent
      * than this value.
@@ -50,23 +39,23 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
 
     public final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
+    final String TAG = "UserLocation update:";
 
     // Keys for storing activity state in the Bundle.
 //    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
 //    protected final static String LOCATION_KEY = "location-key";
 //    protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
-
-    final String TAG = "UserLocation update:";
     protected LocationRequest mLocationRequest;
-
     /**
      * ** Represents a geographical location.
      */
 
-    protected android.location.Location mCurrentLocation;
+    protected android.location.Location mCurrentLocation=null;
+    Intent parentActivityIntent ;
     private GoogleApiClient mGoogleApiClient;
 
     public LocationService() {
+        super(LocationService.class.getName());
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -255,14 +244,24 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
 
 
     public void onConnected(Bundle bundle) {
-
+        Log.d(TAG,"permission error");
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
             return;
+
         }
 
-        createLocationRequest();
-        startLocationUpdates();
+        while(mCurrentLocation==null)
+            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        Log.d(TAG,String.valueOf(mCurrentLocation.getLatitude()));
+        Intent i = new Intent("locnIntent");
+        //Intent i = new Intent()
+        i.putExtra("currentLatitude",mCurrentLocation.getLatitude());
+        i.putExtra("currentLongitude",mCurrentLocation.getLongitude());
+        this.sendBroadcast(i);
+        Log.d(TAG,"service stopped");
+        this.stopSelf();
+        // createLocationRequest();
+       // startLocationUpdates();
     }
 
 
@@ -273,6 +272,7 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
 
         //  LatLng origin = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
+      /*
         Geocoder geocoder;
         List<Address> addresses = null;
         geocoder = new Geocoder(this, Locale.getDefault());
@@ -332,16 +332,16 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
             String x = "row " + i + "" + "time : " + locn.getTimestamp() + " address: " + locn.getAddress();
             Log.d("db:", x);
         }
-
+        */
 
     }
 
 
     protected void stopLocationUpdates() {
+
         // It is a good practice to remove location requests when the activity is in a paused or
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
-
         // The final argument to {@code requestLocationUpdates()} is a LocationListener
         // (http://developer.android.com/reference/com/google/android/gms/location/LocationListener.html).
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
@@ -364,29 +364,37 @@ public class LocationService extends Service implements OnMapReadyCallback, Goog
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
+    protected void onHandleIntent(Intent intent) {
+        Log.d(TAG, "Service Started!");
+        //parentActivityIntent = intent ;
         buildGoogleApiClient();
-//        receiver = new BroadcastReceiver() {
-//            @Override
-//            public void onReceive(Context context, Intent intent) {
-//                //Add current time
-//
-//                Travel_Mode = intent.getStringExtra("activity");
-//                if (Travel_Mode.equals("other"))
-//                    Travel_Mode = "driving";
-//
-//                confidence = intent.getExtras().getInt("confidence");
-//
-//            }
-//        };
-
-        //Filter the Intent and register broadcast receiver
-//        IntentFilter filter = new IntentFilter();
-//        filter.addAction("ImActive");
-//        registerReceiver(receiver, filter);
-        return START_STICKY;
+        // final ResultReceiver receiver = intent.getParcelableExtra("receiver");
     }
+
+ //   @Override
+//    public int onStartCommand(Intent intent, int flags, int startId) {
+//
+//
+////        receiver = new BroadcastReceiver() {
+////            @Override
+////            public void onReceive(Context context, Intent intent) {
+////                //Add current time
+////
+////                Travel_Mode = intent.getStringExtra("activity");
+////                if (Travel_Mode.equals("other"))
+////                    Travel_Mode = "driving";
+////
+////                confidence = intent.getExtras().getInt("confidence");
+////
+////            }
+////        };
+//
+//        //Filter the Intent and register broadcast receiver
+////        IntentFilter filter = new IntentFilter();
+////        filter.addAction("ImActive");
+////        registerReceiver(receiver, filter);
+//        return START_STICKY;
+//    }
 
 
     /**

@@ -40,18 +40,18 @@ import java.util.List;
 public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
-    private GoogleMap mMap;
+    private static String API_KEY = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
+    private GoogleMap mMap = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_draw_path);
-        // SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        // mapFragment.getMapAsync(this);
-        String directionUrl;
-        // directionurl = getIntent().getStringExtra("URL");
-        directionUrl = "https://maps.googleapis.com/maps/api/directions/json?origin=jaipur&destination=mumbai&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
-        Log.d("URL to draw:", directionUrl);
+
+        String source = getIntent().getStringExtra("source");
+        String destn = getIntent().getStringExtra("destn");
+        String directionUrl = getDirectionApiEndpoint(source, destn);
+
         JsonObjectRequest routeRequest = new JsonObjectRequest(Request.Method.GET, directionUrl, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
@@ -111,10 +111,12 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
     }
 
 
-    private void fun(JSONObject response) {
-
+    private String getDirectionApiEndpoint(String source, String destn) {   //https://maps.googleapis.com/maps/api/directions/json?origin=jaipur&destination=mumbai&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
+        String baseUrl = "https://maps.googleapis.com/maps/api/directions/json";
+        String directionUrl = baseUrl + "?origin=" + source + "&destination=" + destn + "&key=" + API_KEY;
+        Log.d("Api_path", directionUrl);
+        return directionUrl;
     }
-
     //parsing jsondata to list .
     public List<List<HashMap<String, String>>> parse(JSONObject jObject) {
 
@@ -281,9 +283,9 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
             // tvDistanceDuration.setText("Distance:"+distance + ", Duration:"+duration);
 
             // Drawing polyline in the Google Map ..
-            mMap.addPolyline(lineOptions);
+            while (mMap != null)
+                mMap.addPolyline(lineOptions);
         }
-
     }
 
 
