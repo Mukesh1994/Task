@@ -39,7 +39,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
 
     public final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
-    final String TAG = "UserLocation update:";
+    final String TAG = "Place update:";
 
     // Keys for storing activity state in the Bundle.
 //    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
@@ -77,7 +77,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
      * the AndroidManifest.xml.
      * <p/>
      * When the ACCESS_FINE_LOCATION setting is specified, combined with a fast update
-     * interval (5 seconds), the Fused UserLocation Provider API returns location updates that are
+     * interval (5 seconds), the Fused Place Provider API returns location updates that are
      * accurate to within a few feet.
      * <p/>
      * These settings are appropriate for mapping applications that show real-time location
@@ -94,6 +94,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
+            Log.d(TAG, "permision err");
             return;
         }
         LocationServices.FusedLocationApi.requestLocationUpdates(
@@ -244,24 +245,20 @@ public class LocationService extends IntentService implements OnMapReadyCallback
 
 
     public void onConnected(Bundle bundle) {
-        Log.d(TAG,"permission error");
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "permission error");
             return;
+
 
         }
 
-        while(mCurrentLocation==null)
-            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        Log.d(TAG,String.valueOf(mCurrentLocation.getLatitude()));
-        Intent i = new Intent("locnIntent");
-        //Intent i = new Intent()
-        i.putExtra("currentLatitude",mCurrentLocation.getLatitude());
-        i.putExtra("currentLongitude",mCurrentLocation.getLongitude());
-        this.sendBroadcast(i);
-        Log.d(TAG,"service stopped");
-        this.stopSelf();
-        // createLocationRequest();
-       // startLocationUpdates();
+        //while(mCurrentLocation==null)
+        //    mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+
+        createLocationRequest();
+        startLocationUpdates();
     }
 
 
@@ -269,7 +266,15 @@ public class LocationService extends IntentService implements OnMapReadyCallback
 
         mCurrentLocation = location;
         Log.d("CurrentLoc", location.getLatitude() + ", " + location.getLongitude());
-
+        Log.d(TAG,String.valueOf(mCurrentLocation.getLatitude()));
+        Intent i = new Intent("locnIntent");
+        //Intent i = new Intent()
+        i.putExtra("currentLatitude",mCurrentLocation.getLatitude());
+        i.putExtra("currentLongitude",mCurrentLocation.getLongitude());
+        this.sendBroadcast(i);
+        Log.d(TAG,"service stopped");
+        stopLocationUpdates();
+        this.stopSelf();
         //  LatLng origin = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
       /*
@@ -300,14 +305,14 @@ public class LocationService extends IntentService implements OnMapReadyCallback
         Log.d("Address:", fullAddress);
 
         //inserting to database
-        UserLocationOpenDatabaseHelper locnOpenDatabaseHelper = new UserLocationOpenDatabaseHelper(this);
+        PlaceOpenDatabaseHelper locnOpenDatabaseHelper = new PlaceOpenDatabaseHelper(this);
 
         // creating dao
-        Dao<UserLocation, Long> locnDao = locnOpenDatabaseHelper.getDao();
+        Dao<Place, Long> locnDao = locnOpenDatabaseHelper.getDao();
 
         String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
 
-        UserLocation locn = new UserLocation();
+        Place locn = new Place();
         locn.setLatitude(location.getLatitude());
         locn.setLongitude(location.getLongitude());
         locn.setAddress(fullAddress);
@@ -319,7 +324,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
             e.printStackTrace();
         }
 
-        List<UserLocation> fetchLocn = null;
+        List<Place> fetchLocn = null;
 
         try {
             fetchLocn = locnDao.queryForAll();

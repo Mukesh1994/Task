@@ -4,7 +4,7 @@ import android.content.Context;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.example.admin.Task.dbmodel.UserLocation;
+import com.example.admin.Task.dbmodel.Place;
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.support.ConnectionSource;
@@ -13,15 +13,15 @@ import com.j256.ormlite.table.TableUtils;
 /**
  * Created by ADMIN on 02-08-2016.
  */
-public class UserLocationOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
+public class PlaceOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
     private static final String DATABASE_NAME = "Ormlite.db";
     private static final int DATABASE_VERSION = 1;
     /**
      * The data access object used to interact with the Sqlite database to do C.R.U.D operations.
      */
-    private Dao<UserLocation, Long> locnDao;
+    private Dao<Place, Long> locnDao;
 
-    public UserLocationOpenDatabaseHelper(Context context) {
+    public PlaceOpenDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
@@ -34,7 +34,7 @@ public class UserLocationOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
             /**
              * creates the Todo database table
              */
-            TableUtils.createTable(connectionSource, UserLocation.class);
+            TableUtils.createTable(connectionSource, Place.class);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -51,7 +51,7 @@ public class UserLocationOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
              * Recreates the database when onUpgrade is called by the framework
              */
             try {
-                TableUtils.dropTable(connectionSource, UserLocation.class, false);
+                TableUtils.dropTable(connectionSource, Place.class, false);
             } catch (java.sql.SQLException e) {
                 e.printStackTrace();
             }
@@ -70,14 +70,12 @@ public class UserLocationOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
      * @throws SQLException
      */
 
-    //lconDao = getDao(UserLocation.class);
-
-
-    public Dao<UserLocation, Long> getDao() throws SQLException {
+    //lconDao = getDao(Place.class);
+    public Dao<Place, Long> getDao() throws SQLException {
 
         if (locnDao == null) {
             try {
-                locnDao = getDao(UserLocation.class);   //getDao(UserLocation.class)
+                locnDao = getDao(Place.class);   //getDao(Place.class)
             } catch (java.sql.SQLException e) {
                 e.printStackTrace();
             }

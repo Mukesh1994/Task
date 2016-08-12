@@ -1,13 +1,17 @@
 
 package com.example.admin.Task.activities;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -19,12 +23,15 @@ import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.admin.Task.R;
+import com.example.admin.Task.services.LocationService;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -37,42 +44,26 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener,
+public class DrawPath extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     private static String API_KEY = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
     private GoogleMap mMap = null;
+    private String directionUrl, destination;
+    private BroadcastReceiver receiver;
+    private double currntLatitude, currntLongitude;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_draw_path);
+        updateCurrentLocn();
+        //source = getIntent().getStringExtra("source");
+        destination = getIntent().getStringExtra("destn");
+        String source = currntLatitude + "," + currntLongitude;
+        directionUrl = getDirectionApiEndpoint(source, destination);
 
-        String source = getIntent().getStringExtra("source");
-        String destn = getIntent().getStringExtra("destn");
-        String directionUrl = getDirectionApiEndpoint(source, destn);
-
-        JsonObjectRequest routeRequest = new JsonObjectRequest(Request.Method.GET, directionUrl, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-
-                ParserTask parser = new ParserTask();
-                parser.execute(String.valueOf(response));
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                // if (error instanceof TimeoutError || error instanceof NoConnectionError) {
-                VolleyLog.d("connection error", "Error: " + error.getMessage());
-                Toast.makeText(getApplicationContext(),
-                        error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-        routeRequest.setRetryPolicy(new DefaultRetryPolicy(40000, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-        Volley.newRequestQueue(getBaseContext()).add(routeRequest);
-// Request a string response from the provided URL.
     }
-
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
@@ -94,22 +85,80 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
 
     }
 
+    public void updateCurrentLocn() {
+
+        Log.d("TAG", "updatingcurrentlocn");
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+
+                currntLatitude = intent.getDoubleExtra("currentLatitude", 0.0);
+                currntLongitude = intent.getDoubleExtra("currentLongitude", 0.0);
+                // got current location now drawing map.
+
+                SupportMapFragment mapFragment =
+                        (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+                mapFragment.getMapAsync(DrawPath.this);
+
+                Log.d("TAG", "Got response from service");
+            }
+        };
+
+        //Filter the Intent and register broadcast receiver
+        IntentFilter filter = new IntentFilter();
+        //filter.set
+        filter.addAction("locnIntent");
+        registerReceiver(receiver, filter);
+        Intent intentService = new Intent(DrawPath.this, LocationService.class);
+        startService(intentService);
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
         mMap = googleMap;
-        // Add a marker in Sydney and move the camera
-        LatLng patna = new LatLng(25.5409502, 84.8509198);
         mMap.setOnMapLongClickListener(this);
-        //mMap.addMarker(new MarkerOptions().position(patna).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(patna));
+        LatLng currntLocn = new LatLng(currntLatitude, currntLongitude);
+        CameraUpdate center = CameraUpdateFactory.newLatLng(currntLocn);
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(15);
+        mMap.moveCamera(center);
+        mMap.animateCamera(zoom);
+        mMap.addMarker(new MarkerOptions().position(currntLocn).title("Current Location"));
+        //path formation on map .
+        drawLine();
+    }
 
+    public void drawLine() {
+        JsonObjectRequest routeRequest = new JsonObjectRequest(Request.Method.GET, directionUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                //parsing the returned json data .
+                ParserTask parser = new ParserTask();
+                Log.d("volley Response.:", String.valueOf(response));
+                parser.execute(String.valueOf(response));
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                // if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                VolleyLog.d("connection error", "Error: " + error.getMessage());
+                Toast.makeText(getApplicationContext(),
+                        error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+        routeRequest.setRetryPolicy(new DefaultRetryPolicy(40000, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        Volley.newRequestQueue(getBaseContext()).add(routeRequest);
     }
 
     @Override
     public void onLocationChanged(Location location) {
     }
 
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(receiver);
+    }
 
     private String getDirectionApiEndpoint(String source, String destn) {   //https://maps.googleapis.com/maps/api/directions/json?origin=jaipur&destination=mumbai&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
         String baseUrl = "https://maps.googleapis.com/maps/api/directions/json";
@@ -117,6 +166,7 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
         Log.d("Api_path", directionUrl);
         return directionUrl;
     }
+
     //parsing jsondata to list .
     public List<List<HashMap<String, String>>> parse(JSONObject jObject) {
 
@@ -159,9 +209,7 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
                         String polyline = "";
                         polyline = (String) ((JSONObject) ((JSONObject) jSteps.get(k)).get("polyline")).get("points");
                         List<LatLng> list = decodePoly(polyline);
-                        //double tmp = (double)((JSONObject)((JSONObject)jSteps.get(k)).get("duration")).get("value");
-                        //Log.d("duration: ",Double.toString(tmp) );
-                        //expected_time+=tmp;
+
                         /** Traversing all points */
                         for (int l = 0; l < list.size(); l++) {
                             HashMap<String, String> hm = new HashMap<String, String>();
@@ -213,7 +261,6 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
 
         return poly;
     }
-
     // parsing in background..
     private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
 
@@ -255,38 +302,38 @@ public class DrawPath extends AppCompatActivity implements OnMapReadyCallback, G
                 for (int j = 0; j < path.size(); j++) {
                     HashMap<String, String> point = path.get(j);
 
-                    if (j == 0) {    // Get distance from the list
-                        distance = (String) point.get("distance");
-                        continue;
-                    } else if (j == 1) { // Get duration from the list
-                        duration = (String) point.get("duration");
-
-                        continue;
-                    }
+//                    if (j == 0) {    // Get distance from the list
+//                        distance = (String) point.get("distance");
+//                        continue;72.8587273
+//                    } else if (j == 1) { // Get duration from the list
+//                        duration = (String) point.get("duration");
+//
+//                        continue;
+//                    }
+                    if (j <= 1) continue;
 
                     double lat = Double.parseDouble(point.get("lat"));
                     double lng = Double.parseDouble(point.get("lng"));
+
                     LatLng position = new LatLng(lat, lng);
-//                    if(j==3)
-//                        mMap.addMarker(new MarkerOptions().position(position).title("Start"));
-//                    if(j==path.size()-1)
-//                        mMap.addMarker(new MarkerOptions().position(position).title("Stop"));
+                    //                  if(j==3)
+                    //                     mMap.addMarker(new MarkerOptions().position(position).title("Start"));
+                    if (j == path.size() - 1)
+                        mMap.addMarker(new MarkerOptions().position(position).title("Stop"));
+                    Log.d("points: ", position.latitude + "," + position.longitude);
                     points.add(position);
                 }
 
                 // Adding all the points in the route to LineOptions
                 lineOptions.addAll(points);
-                lineOptions.width(4);
+                lineOptions.width(6);
                 lineOptions.color(Color.BLUE);
             }
 
             // tvDistanceDuration.setText("Distance:"+distance + ", Duration:"+duration);
-
             // Drawing polyline in the Google Map ..
-            while (mMap != null)
+            if (mMap != null)
                 mMap.addPolyline(lineOptions);
         }
     }
-
-
 }

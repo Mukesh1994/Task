@@ -2,14 +2,11 @@ package com.example.admin.Task.activities;
 
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -20,11 +17,15 @@ import com.example.admin.Task.R;
 import com.example.admin.Task.adapter.RestrosAdapter;
 import com.example.admin.Task.apimodel.RestaurantsResponse;
 import com.example.admin.Task.apimodel.Result;
+import com.example.admin.Task.dbhelper.PlaceOpenDatabaseHelper;
 import com.example.admin.Task.rest.ApiClient;
 import com.example.admin.Task.rest.ApiInterface;
-import com.example.admin.Task.services.LocationService;
+import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.j256.ormlite.android.apptools.OpenHelperManager;
+import com.j256.ormlite.dao.Dao;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,17 +34,15 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-//import android.content.BroadcastReceiver
-
-//import com.example.admin.Task.apimodel.User;
-
 public class MainActivity extends AppCompatActivity {
 
     final String TAG = "MainActivity Log :";
+    final int radius = 5000;
+    final String type = "restaurant";
+    final String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
     public int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION;
     public RecyclerView recyclerView;
     double currntLatitude = 0.0, currntLongitude = 0.0;
-    private BroadcastReceiver receiver;
     private boolean showRestros = false;
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -59,35 +58,15 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
-            Log.d("LOG::", "permission check done ");
-        }
+        //initializing components
+        initialize();
+
+        //resolving permission panga .
+        permissonCheck();
+
+        showRestros();
 
 
-        //  boolean fetchFromDatabase = false ;
-        //  if(!fetchFromDatabase)
-        // {
-        showRestros = true;
-        updateCurrentLocn();
-        //  }
-
-
-        // Intent I = new Intent(MainActivity.this, DrawPath.class);
-        // startActivity(I);
-
-        //       recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
-        //       recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        //       showNearbyRestros();
-
-
-//
 ////
 //        Button clickme=(Button)findViewById(R.id.clickme);
 //        clickme.setOnClickListener(new View.OnClickListener() {
@@ -102,44 +81,38 @@ public class MainActivity extends AppCompatActivity {
         // String x = "location=51.503186,-0.126446&radius=5000&type=museum&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
         //https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
 
-
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
-        //   client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
-    public void updateCurrentLocn() {
-        Log.d("TAG", "updatingcurrentlocn");
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                //Add current time
 
-                currntLatitude = intent.getDoubleExtra("currentLatitude", 0.0);
-                currntLongitude = intent.getDoubleExtra("currentLongitude", 0.0);
-                Log.d("TAG", "Got response from service");
-                if (showRestros)
-                    showNearbyRestros();
-            }
-        };
+    public void permissonCheck() {
 
-        //Filter the Intent and register broadcast receiver
-        //IntentFilter fl = new IntentFilter();
-        IntentFilter filter = new IntentFilter();
-        //filter.set
-        filter.addAction("locnIntent");
-        registerReceiver(receiver, filter);
-        Intent intentService = new Intent(MainActivity.this, LocationService.class);
-        startService(intentService);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+            Log.d("LOG::", "permission check done ");
+
+        }
     }
 
-    public void showNearbyRestros() {
+    public void initialize() {
 
-        Log.d(TAG, "Showing REstros");
+        recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+
+    }
+
+
+    public void getRestroUsingApiCall() {
+        Log.d(TAG, "Showing Restros");
         String location = currntLatitude + "," + currntLongitude;
-        int radius = 5000;
-        String type = "restaurant";
-        String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
         Map<String, String> data = new HashMap<>();
         data.put("location", location);
         data.put("radius", String.valueOf(radius));
@@ -153,21 +126,77 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     int statusCode = response.code();
                     List<Result> restros = response.body().getResults();
-                    recyclerView.setAdapter(new RestrosAdapter(restros, currntLatitude, currntLongitude, R.layout.list_item_restro, getApplicationContext()));
-
+                    createDb(restros);
+                    //  Log.d("restros:", restros.get(0).getName());
+                    //
                 } else {
-
                     Log.d("Response : ", response.toString());
                     Log.d("res", call.toString());
                 }
             }
+
             @Override
             public void onFailure(Call<RestaurantsResponse> call, Throwable t) {
                 // Log error here since request failed
                 Log.e("Response:", t.toString());
             }
         });
+    }
 
+    public void showRestroUsingDb() {
+
+        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
+
+        try {
+            List<com.example.admin.Task.dbmodel.Place> place = placeDao.queryForAll();
+            recyclerView.setAdapter(new RestrosAdapter(place, R.layout.list_item_restro, getApplicationContext()));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    public void createDb(List<Result> res) {
+
+        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
+        for (int i = 0; i < res.size(); i++) {
+            com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
+
+            place.setName(res.get(i).getName());
+            place.setAddress(res.get(i).getVicinity());
+            place.setLatitude(res.get(i).getGeometry().getLocation().getLat());
+            place.setLongitude(res.get(i).getGeometry().getLocation().getLng());
+            place.setContactNum("0000000");
+            place.setPriceLevel((int) res.get(i).getPriceLevel());
+            place.setRating(res.get(i).getRating());
+
+            try {
+                placeDao.create(place);
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void showRestros() {
+
+        boolean dbEmpty = true;
+        // see if db is empty.
+        
+        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+        //Dao<com.example.admin.Task.dbmodel.Place,Long> placeDao = placeOpenDatabaseHelper.getDao();
+
+        if (!placeOpenDatabaseHelper.isOpen()) {
+            getRestroUsingApiCall();
+            // updateDb();
+        } else {
+            //show using db.
+            showRestroUsingDb();
+        }
     }
 
     @Override
@@ -199,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
 
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
-//        client.connect();
+        client.connect();
 //        Action viewAction = Action.newAction(
 //                Action.TYPE_VIEW, // TODO: choose an action type.
 //                "Main Page", // TODO: Define a title for the content shown.
@@ -230,11 +259,11 @@ public class MainActivity extends AppCompatActivity {
 //                Uri.parse("android-app://com.example.admin.Task.activities/http/host/path")
 //        );
 //        AppIndex.AppIndexApi.end(client, viewAction);
-//        client.disconnect();
+        client.disconnect();
     }
 
     public void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(receiver);
+        //unregisterReceiver(receiver);
     }
 }

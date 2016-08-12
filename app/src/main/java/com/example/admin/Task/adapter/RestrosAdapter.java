@@ -3,6 +3,7 @@ package com.example.admin.Task.adapter;
 import android.content.Context;
 import android.content.Intent;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +12,7 @@ import android.widget.TextView;
 
 import com.example.admin.Task.R;
 import com.example.admin.Task.activities.DrawPath;
-import com.example.admin.Task.apimodel.Result;
+import com.example.admin.Task.dbmodel.Place;
 
 import java.util.List;
 
@@ -19,20 +20,15 @@ import java.util.List;
  * Created by ADMIN on 08-08-2016.
  */
 public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroViewHolder> {
-    private static List<Result> restros;
+    private static List<Place> restros;
     private static int rowLayout;
     private static Context context;
-    private static double currntLatitude;
-    private static double currntLongitude;
 
-
-    public RestrosAdapter(List<Result> restros, double currntLatitude, double currntLongitude, int rowLayout, Context context) {
+    public RestrosAdapter(List<Place> restros, int rowLayout, Context context) {
 
         this.restros = restros;
         this.rowLayout = rowLayout;
         this.context = context;
-        this.currntLatitude = currntLatitude;
-        this.currntLongitude = currntLongitude;
     }
 
     @Override
@@ -46,7 +42,7 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
     public void onBindViewHolder(RestroViewHolder holder, final int position) {
         holder.restroTitle.setText(restros.get(position).getName());
         holder.data.setText(Long.toString(restros.get(position).getPriceLevel()));
-        holder.restroDescription.setText(restros.get(position).getVicinity());
+        holder.restroDescription.setText(restros.get(position).getAddress());
         holder.rating.setText(Double.toString(restros.get(position).getRating()));
     }
 
@@ -65,6 +61,7 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
 
         public RestroViewHolder(View v) {
             super(v);
+            v.setOnClickListener(this);
             restroLayout = (LinearLayout) v.findViewById(R.id.movies_layout);
             restroTitle = (TextView) v.findViewById(R.id.title);
             data = (TextView) v.findViewById(R.id.subtitle);
@@ -76,10 +73,11 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
         public void onClick(View v) {
 
             Intent intent = new Intent(context, DrawPath.class);
-            String source = currntLatitude + "," + currntLongitude;
-            String destn = restros.get(getPosition()).getGeometry().getLocation().getLat() + "," + restros.get(getPosition()).getGeometry().getLocation().getLng();
-            intent.putExtra("source", source);
-            intent.putExtra("destn", destn);
+            String destination = restros.get(getPosition()).getLatitude() + "," + restros.get(getPosition()).getLongitude();
+            Log.d("onClicked:", destination);
+            // intent.putExtra("source", source);
+            intent.putExtra("destn: ", destination);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         }
     }
