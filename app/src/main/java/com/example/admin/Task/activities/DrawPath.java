@@ -33,6 +33,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
@@ -47,22 +48,21 @@ import java.util.List;
 public class DrawPath extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
+    private static String TAG = "DRAWPATH ACTIVITY :";
     private static String API_KEY = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
+
     private GoogleMap mMap = null;
     private String directionUrl, destination;
     private BroadcastReceiver receiver;
-    private double currntLatitude, currntLongitude;
+    private double currntLatitude, currntLongitude, destnLatitude, destnLongitude;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_draw_path);
-        updateCurrentLocn();
-        //source = getIntent().getStringExtra("source");
-        destination = getIntent().getStringExtra("destn");
-        String source = currntLatitude + "," + currntLongitude;
-        directionUrl = getDirectionApiEndpoint(source, destination);
 
+        //fetch currntlocation.
+        updateCurrentLocn();
     }
 
     @Override
@@ -87,16 +87,27 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
 
     public void updateCurrentLocn() {
 
-        Log.d("TAG", "updatingcurrentlocn");
+        Log.d(TAG, "updatingcurrentlocn");
+        //fetching the current location .
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
 
 
+                //getting current loation from service
                 currntLatitude = intent.getDoubleExtra("currentLatitude", 0.0);
                 currntLongitude = intent.getDoubleExtra("currentLongitude", 0.0);
-                // got current location now drawing map.
 
+                //getting destination ..
+                destnLatitude = getIntent().getDoubleExtra("destnLatitude", 0.0);
+                destnLongitude = getIntent().getDoubleExtra("destnLongitude", 0.0);
+
+                String source = currntLatitude + "," + currntLongitude;
+                String destination = destnLatitude + "," + destnLongitude;
+
+                directionUrl = getDirectionApiEndpoint(source, destination);
+                // got current location now drawing map.
+                Log.d(TAG, directionUrl);
                 SupportMapFragment mapFragment =
                         (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
                 mapFragment.getMapAsync(DrawPath.this);
@@ -120,14 +131,21 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
         mMap = googleMap;
         mMap.setOnMapLongClickListener(this);
         LatLng currntLocn = new LatLng(currntLatitude, currntLongitude);
-        CameraUpdate center = CameraUpdateFactory.newLatLng(currntLocn);
-        CameraUpdate zoom = CameraUpdateFactory.zoomTo(15);
-        mMap.moveCamera(center);
-        mMap.animateCamera(zoom);
+        LatLng destnLocn = new LatLng(destnLatitude, destnLongitude);
+
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        builder.include(currntLocn).include(destnLocn);
+
+        //Animate to the bounds
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
+        mMap.moveCamera(cameraUpdate);
         mMap.addMarker(new MarkerOptions().position(currntLocn).title("Current Location"));
+        mMap.addMarker(new MarkerOptions().position(destnLocn).title("destination"));
         //path formation on map .
         drawLine();
     }
+
 
     public void drawLine() {
         JsonObjectRequest routeRequest = new JsonObjectRequest(Request.Method.GET, directionUrl, null, new Response.Listener<JSONObject>() {
@@ -137,6 +155,7 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
                 ParserTask parser = new ParserTask();
                 Log.d("volley Response.:", String.valueOf(response));
                 parser.execute(String.valueOf(response));
+
             }
         }, new Response.ErrorListener() {
             @Override
@@ -228,6 +247,8 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
         return routes;
     }
 
+
+    //idk abt this
     private List<LatLng> decodePoly(String encoded) {
 
         List<LatLng> poly = new ArrayList<LatLng>();
@@ -282,14 +303,11 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
             ArrayList<LatLng> points = null;
             PolylineOptions lineOptions = null;
-            MarkerOptions markerOptions = new MarkerOptions();
-            String distance = "";
-            String duration = "";
             if (result.size() < 1) {
                 Toast.makeText(getBaseContext(), "No Points", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // Traversing through all the routes
+            // Traversing through the routes
             for (int i = 0; i < result.size(); i++) {
 
                 points = new ArrayList<LatLng>();
@@ -310,16 +328,14 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
 //
 //                        continue;
 //                    }
+
                     if (j <= 1) continue;
 
                     double lat = Double.parseDouble(point.get("lat"));
                     double lng = Double.parseDouble(point.get("lng"));
 
                     LatLng position = new LatLng(lat, lng);
-                    //                  if(j==3)
-                    //                     mMap.addMarker(new MarkerOptions().position(position).title("Start"));
-                    if (j == path.size() - 1)
-                        mMap.addMarker(new MarkerOptions().position(position).title("Stop"));
+
                     Log.d("points: ", position.latitude + "," + position.longitude);
                     points.add(position);
                 }
@@ -330,7 +346,6 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
                 lineOptions.color(Color.BLUE);
             }
 
-            // tvDistanceDuration.setText("Distance:"+distance + ", Duration:"+duration);
             // Drawing polyline in the Google Map ..
             if (mMap != null)
                 mMap.addPolyline(lineOptions);

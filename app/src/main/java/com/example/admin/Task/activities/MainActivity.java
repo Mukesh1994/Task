@@ -3,6 +3,7 @@ package com.example.admin.Task.activities;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -18,6 +19,7 @@ import com.example.admin.Task.adapter.RestrosAdapter;
 import com.example.admin.Task.apimodel.RestaurantsResponse;
 import com.example.admin.Task.apimodel.Result;
 import com.example.admin.Task.dbhelper.PlaceOpenDatabaseHelper;
+import com.example.admin.Task.dbmodel.Place;
 import com.example.admin.Task.rest.ApiClient;
 import com.example.admin.Task.rest.ApiInterface;
 import com.google.android.gms.appindexing.AppIndex;
@@ -40,10 +42,12 @@ public class MainActivity extends AppCompatActivity {
     final int radius = 5000;
     final String type = "restaurant";
     final String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
+
+    final double sourceLatitude = 19.102512, sourceLongitude = 72.845367;
+
     public int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION;
     public RecyclerView recyclerView;
-    double currntLatitude = 0.0, currntLongitude = 0.0;
-    private boolean showRestros = false;
+    private PlaceOpenDatabaseHelper databaseHelper = null;
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
@@ -64,7 +68,12 @@ public class MainActivity extends AppCompatActivity {
         //resolving permission panga .
         permissonCheck();
 
-        showRestros();
+        //showing restaurants...
+        try {
+            showRestros();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
 
 ////
@@ -102,22 +111,40 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void initialize() {
-
         recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+    }
 
+    public void fillDb(List<Result> data) {
+
+        Dao<Place, Long> placeDao = getHelper().getDao();
+        for (int i = 0; i < data.size(); i++) {
+            com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
+            place.setName(data.get(i).getName());
+            place.setAddress(data.get(i).getVicinity());
+            place.setLatitude(data.get(i).getGeometry().getLocation().getLat());
+            place.setLongitude(data.get(i).getGeometry().getLocation().getLng());
+            place.setContactNum("0000000");
+            place.setPriceLevel((int) data.get(i).getPriceLevel());
+            place.setRating(data.get(i).getRating());
+            try {
+                placeDao.create(place);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
-
     public void getRestroUsingApiCall() {
-        Log.d(TAG, "Showing Restros");
-        String location = currntLatitude + "," + currntLongitude;
+        //  Log.d(TAG, "Showing Restros");
+        String location = sourceLatitude + "," + sourceLongitude;
         Map<String, String> data = new HashMap<>();
         data.put("location", location);
         data.put("radius", String.valueOf(radius));
         data.put("type", type);
         data.put("key", key);
+
         ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
         Call<RestaurantsResponse> call = apiService.getNearByRestros(data);
         call.enqueue(new Callback<RestaurantsResponse>() {
@@ -126,9 +153,8 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     int statusCode = response.code();
                     List<Result> restros = response.body().getResults();
-                    createDb(restros);
-                    //  Log.d("restros:", restros.get(0).getName());
-                    //
+                    InsertInDb task = new InsertInDb();
+                    task.execute(restros);
                 } else {
                     Log.d("Response : ", response.toString());
                     Log.d("res", call.toString());
@@ -143,59 +169,28 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void showRestroUsingDb() {
-
-        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
-        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
-
-        try {
-            List<com.example.admin.Task.dbmodel.Place> place = placeDao.queryForAll();
-            recyclerView.setAdapter(new RestrosAdapter(place, R.layout.list_item_restro, getApplicationContext()));
-        } catch (SQLException e) {
-            e.printStackTrace();
+    private PlaceOpenDatabaseHelper getHelper() { // DatabaseHelper getHelper() {
+        if (databaseHelper == null) {
+            databaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
         }
-
-
+        return databaseHelper;
     }
 
-    public void createDb(List<Result> res) {
+    public void showRestros() throws SQLException {
 
-        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
-        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
-        for (int i = 0; i < res.size(); i++) {
-            com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
-
-            place.setName(res.get(i).getName());
-            place.setAddress(res.get(i).getVicinity());
-            place.setLatitude(res.get(i).getGeometry().getLocation().getLat());
-            place.setLongitude(res.get(i).getGeometry().getLocation().getLng());
-            place.setContactNum("0000000");
-            place.setPriceLevel((int) res.get(i).getPriceLevel());
-            place.setRating(res.get(i).getRating());
-
-            try {
-                placeDao.create(place);
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public void showRestros() {
-
-        boolean dbEmpty = true;
         // see if db is empty.
-        
-        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
-        //Dao<com.example.admin.Task.dbmodel.Place,Long> placeDao = placeOpenDatabaseHelper.getDao();
+        boolean dbEmpty = false;
+        Dao<Place, Long> placedao = getHelper().getDao();
+        if (placedao.countOf() == 0)
+            dbEmpty = true;
 
-        if (!placeOpenDatabaseHelper.isOpen()) {
+        if (dbEmpty) {
+            Log.d(TAG, "fetching using api");
             getRestroUsingApiCall();
-            // updateDb();
         } else {
-            //show using db.
-            showRestroUsingDb();
+            Log.d(TAG, "fetching from db");
+            FetchFromDb task = new FetchFromDb();
+            task.execute();
         }
     }
 
@@ -205,6 +200,27 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
+    //   public void createDb(List<Result> res) {
+//
+//        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+//        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
+//        for (int i = 0; i < res.size(); i++) {
+//            com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
+//            place.setName(res.get(i).getName());
+//            place.setAddress(res.get(i).getVicinity());
+//            place.setLatitude(res.get(i).getGeometry().getLocation().getLat());
+//            place.setLongitude(res.get(i).getGeometry().getLocation().getLng());
+//            place.setContactNum("0000000");
+//            place.setPriceLevel((int) res.get(i).getPriceLevel());
+//            place.setRating(res.get(i).getRating());
+//            try {
+//                placeDao.create(place);
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
+//        }
+    //   }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -264,6 +280,56 @@ public class MainActivity extends AppCompatActivity {
 
     public void onDestroy() {
         super.onDestroy();
+        if (databaseHelper != null) {
+            OpenHelperManager.releaseHelper();
+            databaseHelper = null;
+        }
         //unregisterReceiver(receiver);
+    }
+
+    private class InsertInDb extends AsyncTask<List<Result>, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(List<Result>... params) {
+            fillDb(params[0]);
+            return true;
+        }
+
+        protected void onPostExecute(Boolean bool) {
+            if (!bool)
+                Log.d(TAG, "error inserting db");
+            else {
+                Log.d(TAG, "SUCCESSFULL INSERTION IN DB");
+                FetchFromDb task = new FetchFromDb();
+                task.execute();
+            }
+            //showing on recycler view.
+
+            //     recyclerView.setAdapter(new RestrosAdapter(data, R.layout.list_item_restro, getApplicationContext()));
+
+        }
+    }
+
+    private class FetchFromDb extends AsyncTask<Void, Void, List<Place>> {
+        @Override
+        protected List<Place> doInBackground(Void... params) {
+
+            // PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+
+            Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = getHelper().getDao();
+            List<Place> result = null;
+            try {
+                result = placeDao.queryForAll();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        protected void onPostExecute(List<Place> data) {
+            //   List<Place> res =  ;
+            recyclerView.setAdapter(new RestrosAdapter(data, R.layout.list_item_restro, getApplicationContext()));
+        }
+
     }
 }

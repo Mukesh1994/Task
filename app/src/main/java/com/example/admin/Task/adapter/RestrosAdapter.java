@@ -19,7 +19,9 @@ import java.util.List;
 /**
  * Created by ADMIN on 08-08-2016.
  */
+
 public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroViewHolder> {
+
     private static List<Place> restros;
     private static int rowLayout;
     private static Context context;
@@ -73,10 +75,11 @@ public class RestrosAdapter extends RecyclerView.Adapter<RestrosAdapter.RestroVi
         public void onClick(View v) {
 
             Intent intent = new Intent(context, DrawPath.class);
-            String destination = restros.get(getPosition()).getLatitude() + "," + restros.get(getPosition()).getLongitude();
-            Log.d("onClicked:", destination);
-            // intent.putExtra("source", source);
-            intent.putExtra("destn: ", destination);
+            double destnLatitude = restros.get(getPosition()).getLatitude();
+            double destnLongitude = restros.get(getPosition()).getLongitude();
+            Log.d("onClicked:", destnLatitude + "," + destnLongitude);
+            intent.putExtra("destnLatitude", destnLatitude);
+            intent.putExtra("destnLongitude", destnLongitude);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
         }
