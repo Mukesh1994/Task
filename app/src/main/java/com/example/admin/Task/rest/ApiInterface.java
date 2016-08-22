@@ -17,5 +17,4 @@ public interface ApiInterface {
     @GET("/maps/api/place/nearbysearch/json")
     Call<RestaurantsResponse> getNearByRestros(@QueryMap Map<String, String> options
     );
-
 }

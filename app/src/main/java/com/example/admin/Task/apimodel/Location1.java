@@ -8,11 +8,11 @@ import javax.annotation.Generated;
 /**
  * Created by ADMIN on 08-08-2016.
  */
-//-----------------------------------Location.java-----------------------------------
+//-----------------------------------Location1.java-----------------------------------
 
 
 @Generated("org.jsonschema2pojo")
-public class Location {
+public class Location1 {
 
     @SerializedName("lat")
     @Expose

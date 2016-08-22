@@ -13,15 +13,15 @@ import com.j256.ormlite.table.TableUtils;
 /**
  * Created by ADMIN on 02-08-2016.
  */
-public class PlaceOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
-    private static final String DATABASE_NAME = "Ormlite.db";
+public class PlaceOrmDbHelper extends OrmLiteSqliteOpenHelper {
+    private static final String DATABASE_NAME = "place.db";
     private static final int DATABASE_VERSION = 1;
     /**
      * The data access object used to interact with the Sqlite database to do C.R.U.D operations.
      */
     private Dao<Place, Long> locnDao;
 
-    public PlaceOpenDatabaseHelper(Context context) {
+    public PlaceOrmDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
@@ -56,12 +56,10 @@ public class PlaceOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
                 e.printStackTrace();
             }
             onCreate(database, connectionSource);
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
 
     /**
      * Returns an instance of the data access object
@@ -72,7 +70,6 @@ public class PlaceOpenDatabaseHelper extends OrmLiteSqliteOpenHelper {
 
     //lconDao = getDao(Place.class);
     public Dao<Place, Long> getDao() throws SQLException {
-
         if (locnDao == null) {
             try {
                 locnDao = getDao(Place.class);   //getDao(Place.class)

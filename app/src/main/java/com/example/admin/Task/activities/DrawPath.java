@@ -78,10 +78,12 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
+
     }
 
     @Override
     public void onMapLongClick(LatLng latLng) {
+
 
     }
 
@@ -130,6 +132,7 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
 
         mMap = googleMap;
         mMap.setOnMapLongClickListener(this);
+
         LatLng currntLocn = new LatLng(currntLatitude, currntLongitude);
         LatLng destnLocn = new LatLng(destnLatitude, destnLongitude);
 
@@ -140,7 +143,7 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
         //Animate to the bounds
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
         mMap.moveCamera(cameraUpdate);
-        mMap.addMarker(new MarkerOptions().position(currntLocn).title("Current Location"));
+        mMap.addMarker(new MarkerOptions().position(currntLocn).title("Current Location1"));
         mMap.addMarker(new MarkerOptions().position(destnLocn).title("destination"));
         //path formation on map .
         drawLine();
@@ -155,7 +158,6 @@ public class DrawPath extends FragmentActivity implements OnMapReadyCallback, Go
                 ParserTask parser = new ParserTask();
                 Log.d("volley Response.:", String.valueOf(response));
                 parser.execute(String.valueOf(response));
-
             }
         }, new Response.ErrorListener() {
             @Override

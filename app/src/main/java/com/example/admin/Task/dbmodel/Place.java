@@ -18,7 +18,7 @@ public class Place {
     public static final String FIELD_NAME_LONGITUDE = "longitude";
     public static final String FIELD_NAME_ADDRESS = "address";
     public static final String FIELD_NAME_RATING = "rating";
-    public static final String FIELD_NAME_CONTACTNUM = "contact";
+    //    public static final String FIELD_NAME_CONTACTNUM = "contact";
     public static final String FIELD_NAME_PRICELEVEL = "pricelevel";
 
     @DatabaseField(columnName = FIELD_NAME_ID, generatedId = true)
@@ -39,8 +39,8 @@ public class Place {
     @DatabaseField(columnName = FIELD_NAME_PRICELEVEL)
     private int priceLevel;
 
-    @DatabaseField(columnName = FIELD_NAME_CONTACTNUM)
-    private String contactNum;
+//    @DatabaseField(columnName = FIELD_NAME_CONTACTNUM)
+//    private String contactNum;
 
     @DatabaseField(columnName = FIELD_NAME)
     private String name;
@@ -104,13 +104,14 @@ public class Place {
         this.rating = rating;
     }
 
-    public String getContactNum() {
+/*    public String getContactNum() {
         return contactNum;
     }
 
-    public void setContactNum(String contactNum) {
+ //   public void setContactNum(String contactNum) {
         this.contactNum = contactNum;
     }
+*/
 
     public int getPriceLevel() {
         return priceLevel;

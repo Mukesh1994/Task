@@ -1,6 +1,5 @@
 package com.example.admin.Task.activities;
 
-
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
@@ -18,12 +17,11 @@ import com.example.admin.Task.R;
 import com.example.admin.Task.adapter.RestrosAdapter;
 import com.example.admin.Task.apimodel.RestaurantsResponse;
 import com.example.admin.Task.apimodel.Result;
-import com.example.admin.Task.dbhelper.PlaceOpenDatabaseHelper;
+import com.example.admin.Task.dbhelper.PlaceOrmDbHelper;
+import com.example.admin.Task.dbhelper.PlaceSqlDbHelper;
 import com.example.admin.Task.dbmodel.Place;
 import com.example.admin.Task.rest.ApiClient;
 import com.example.admin.Task.rest.ApiInterface;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.dao.Dao;
 
@@ -42,18 +40,21 @@ public class MainActivity extends AppCompatActivity {
     final int radius = 5000;
     final String type = "restaurant";
     final String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
-
     final double sourceLatitude = 19.102512, sourceLongitude = 72.845367;
+    final String DbToUse = "ORMLITE";     //write SQL to use sql ..
 
     public int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION;
     public RecyclerView recyclerView;
-    private PlaceOpenDatabaseHelper databaseHelper = null;
+    private PlaceOrmDbHelper ormDatabaseHelper = null;
+    private PlaceSqlDbHelper sqlDatabaseHelper = null;
+    private boolean dbEmpty = false;
+    private Dao<Place, Long> placeDao = null;
+
+    // api endpoint - https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
      * See https://g.co/AppIndexing/AndroidStudio for more information.
      */
-
-    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +65,6 @@ public class MainActivity extends AppCompatActivity {
 
         //initializing components
         initialize();
-
         //resolving permission panga .
         permissonCheck();
 
@@ -75,26 +75,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-
-////
-//        Button clickme=(Button)findViewById(R.id.clickme);
-//        clickme.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                something();
-//            }
-//        });
-
-        // String userName = "mukesh1994";
-        //   String locn = "56.6,65&radi" ;
-        // String x = "location=51.503186,-0.126446&radius=5000&type=museum&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
-        //https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
-
 
     public void permissonCheck() {
 
@@ -106,34 +87,54 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                     MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
             Log.d("LOG::", "permission check done ");
-
         }
     }
 
     public void initialize() {
         recyclerView = (RecyclerView) findViewById(R.id.restro_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        List<Place> tmp = null;
+        if (DbToUse == "SQL")                                             // initializing sql db .
+        {
+            sqlDatabaseHelper = new PlaceSqlDbHelper(getApplicationContext());
+            tmp = sqlDatabaseHelper.getallPlaces();
+            if (tmp == null)
+                dbEmpty = true;
+        } else {
+            placeDao = getHelper().getDao();              // initializing ormdb..
+            try {
+                if (placeDao.countOf() == 0)
+                    dbEmpty = true;
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     public void fillDb(List<Result> data) {
 
-        Dao<Place, Long> placeDao = getHelper().getDao();
+        // placeDao = getHelper().getDao();
         for (int i = 0; i < data.size(); i++) {
             com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
             place.setName(data.get(i).getName());
             place.setAddress(data.get(i).getVicinity());
             place.setLatitude(data.get(i).getGeometry().getLocation().getLat());
             place.setLongitude(data.get(i).getGeometry().getLocation().getLng());
-            place.setContactNum("0000000");
             place.setPriceLevel((int) data.get(i).getPriceLevel());
             place.setRating(data.get(i).getRating());
-            try {
-                placeDao.create(place);
-            } catch (SQLException e) {
-                e.printStackTrace();
+
+            if (DbToUse == "SQL")
+                sqlDatabaseHelper.createPlace(place);                     // use sqldb else ormlite
+            else {
+                try {
+                    placeDao.create(place);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
-
     }
 
     public void getRestroUsingApiCall() {
@@ -153,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     int statusCode = response.code();
                     List<Result> restros = response.body().getResults();
+                    //List<Northeast> xd;
                     InsertInDb task = new InsertInDb();
                     task.execute(restros);
                 } else {
@@ -169,20 +171,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private PlaceOpenDatabaseHelper getHelper() { // DatabaseHelper getHelper() {
-        if (databaseHelper == null) {
-            databaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
+    private PlaceOrmDbHelper getHelper() { // DatabaseHelper getHelper() {
+        if (ormDatabaseHelper == null) {
+            ormDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOrmDbHelper.class);
         }
-        return databaseHelper;
+        return ormDatabaseHelper;
     }
 
     public void showRestros() throws SQLException {
-
-        // see if db is empty.
-        boolean dbEmpty = false;
-        Dao<Place, Long> placedao = getHelper().getDao();
-        if (placedao.countOf() == 0)
-            dbEmpty = true;
 
         if (dbEmpty) {
             Log.d(TAG, "fetching using api");
@@ -201,26 +197,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    //   public void createDb(List<Result> res) {
-//
-//        PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
-//        Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = placeOpenDatabaseHelper.getDao();
-//        for (int i = 0; i < res.size(); i++) {
-//            com.example.admin.Task.dbmodel.Place place = new com.example.admin.Task.dbmodel.Place();
-//            place.setName(res.get(i).getName());
-//            place.setAddress(res.get(i).getVicinity());
-//            place.setLatitude(res.get(i).getGeometry().getLocation().getLat());
-//            place.setLongitude(res.get(i).getGeometry().getLocation().getLng());
-//            place.setContactNum("0000000");
-//            place.setPriceLevel((int) res.get(i).getPriceLevel());
-//            place.setRating(res.get(i).getRating());
-//            try {
-//                placeDao.create(place);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//        }
-    //   }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -241,48 +217,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onStart() {
         super.onStart();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-//        Action viewAction = Action.newAction(
-//                Action.TYPE_VIEW, // TODO: choose an action type.
-//                "Main Page", // TODO: Define a title for the content shown.
-//                // TODO: If you have web page content that matches this app activity's content,
-//                // make sure this auto-generated web page URL is correct.
-//                // Otherwise, set the URL to null.
-//                Uri.parse("http://host/path"),
-//                // TODO: Make sure this auto-generated app URL is correct.
-//                Uri.parse("android-app://com.example.admin.Task.activities/http/host/path")
-        //   );
-        // AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     @Override
     public void onStop() {
         super.onStop();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-//        Action viewAction = Action.newAction(
-//                Action.TYPE_VIEW, // TODO: choose an action type.
-//                "Main Page", // TODO: Define a title for the content shown.
-//                // TODO: If you have web page content that matches this app activity's content,
-//                // make sure this auto-generated web page URL is correct.
-//                // Otherwise, set the URL to null.
-//                Uri.parse("http://host/path"),
-//                // TODO: Make sure this auto-generated app URL is correct.
-//                Uri.parse("android-app://com.example.admin.Task.activities/http/host/path")
-//        );
-//        AppIndex.AppIndexApi.end(client, viewAction);
-        client.disconnect();
     }
 
     public void onDestroy() {
         super.onDestroy();
-        if (databaseHelper != null) {
+        if (ormDatabaseHelper != null) {
             OpenHelperManager.releaseHelper();
-            databaseHelper = null;
+            ormDatabaseHelper = null;
         }
         //unregisterReceiver(receiver);
     }
@@ -313,15 +259,18 @@ public class MainActivity extends AppCompatActivity {
     private class FetchFromDb extends AsyncTask<Void, Void, List<Place>> {
         @Override
         protected List<Place> doInBackground(Void... params) {
+            // PlaceOrmDbHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOrmDbHelper.class);
 
-            // PlaceOpenDatabaseHelper placeOpenDatabaseHelper = OpenHelperManager.getHelper(this, PlaceOpenDatabaseHelper.class);
-
-            Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = getHelper().getDao();
+            //Dao<com.example.admin.Task.dbmodel.Place, Long> placeDao = getHelper().getDao();
             List<Place> result = null;
-            try {
-                result = placeDao.queryForAll();
-            } catch (SQLException e) {
-                e.printStackTrace();
+            if (DbToUse == "SQL")
+                result = sqlDatabaseHelper.getallPlaces();
+            else {
+                try {
+                    result = placeDao.queryForAll();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
             return result;
         }
@@ -330,6 +279,5 @@ public class MainActivity extends AppCompatActivity {
             //   List<Place> res =  ;
             recyclerView.setAdapter(new RestrosAdapter(data, R.layout.list_item_restro, getApplicationContext()));
         }
-
     }
 }
