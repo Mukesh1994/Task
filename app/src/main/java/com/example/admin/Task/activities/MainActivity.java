@@ -12,7 +12,14 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.example.admin.Task.R;
 import com.example.admin.Task.adapter.RestrosAdapter;
 import com.example.admin.Task.apimodel.RestaurantsResponse;
@@ -20,10 +27,13 @@ import com.example.admin.Task.apimodel.Result;
 import com.example.admin.Task.dbhelper.PlaceOrmDbHelper;
 import com.example.admin.Task.dbhelper.PlaceSqlDbHelper;
 import com.example.admin.Task.dbmodel.Place;
+import com.example.admin.Task.parsers.JsonParser;
 import com.example.admin.Task.rest.ApiClient;
 import com.example.admin.Task.rest.ApiInterface;
 import com.j256.ormlite.android.apptools.OpenHelperManager;
 import com.j256.ormlite.dao.Dao;
+
+import org.json.JSONObject;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -41,14 +51,15 @@ public class MainActivity extends AppCompatActivity {
     final String type = "restaurant";
     final String key = "AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
     final double sourceLatitude = 19.102512, sourceLongitude = 72.845367;
-    final String DbToUse = "ORMLITE";     //write SQL to use sql ..
-
+    final String DbToUse = "SQL";     //write SQL to use sql else wll use ormlite..
     public int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION;
     public RecyclerView recyclerView;
+    boolean toUseRetrofit = true;       // set false to use volley ..
     private PlaceOrmDbHelper ormDatabaseHelper = null;
     private PlaceSqlDbHelper sqlDatabaseHelper = null;
     private boolean dbEmpty = false;
     private Dao<Place, Long> placeDao = null;
+    private String apiUrl = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw";
 
     // api endpoint - https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=51.503186,-0.126446&radius=500&type=restaurant&key=AIzaSyC4CHWVYuw-pSQ0dUwO73egdBs1xrSc1kw
     /**
@@ -146,30 +157,54 @@ public class MainActivity extends AppCompatActivity {
         data.put("type", type);
         data.put("key", key);
 
-        ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
-        Call<RestaurantsResponse> call = apiService.getNearByRestros(data);
-        call.enqueue(new Callback<RestaurantsResponse>() {
-            @Override
-            public void onResponse(Call<RestaurantsResponse> call, Response<RestaurantsResponse> response) {
-                if (response.isSuccessful()) {
-                    int statusCode = response.code();
-                    List<Result> restros = response.body().getResults();
-                    //List<Northeast> xd;
+        if (toUseRetrofit) {
+            ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
+            Call<RestaurantsResponse> call = apiService.getNearByRestros(data);
+            call.enqueue(new Callback<RestaurantsResponse>() {
+                @Override
+                public void onResponse(Call<RestaurantsResponse> call, Response<RestaurantsResponse> response) {
+                    if (response.isSuccessful()) {
+                        int statusCode = response.code();
+                        List<Result> restros = response.body().getResults();
+                        //List<Northeast> xd;
+                        InsertInDb task = new InsertInDb();
+                        task.execute(restros);
+                    } else {
+                        Log.d("Response : ", response.toString());
+                        Log.d("res", call.toString());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<RestaurantsResponse> call, Throwable t) {
+                    // Log error here since request failed
+                    Log.e("Response:", t.toString());
+                }
+            });
+        } else {     // fetching using volley ..
+            JsonObjectRequest routeRequest = new JsonObjectRequest(Request.Method.GET, apiUrl, null, new com.android.volley.Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    JsonParser parser = new JsonParser();
+                    List<Result> restros = parser.parsePlacesApi(response);
                     InsertInDb task = new InsertInDb();
                     task.execute(restros);
-                } else {
-                    Log.d("Response : ", response.toString());
-                    Log.d("res", call.toString());
-                }
-            }
 
-            @Override
-            public void onFailure(Call<RestaurantsResponse> call, Throwable t) {
-                // Log error here since request failed
-                Log.e("Response:", t.toString());
-            }
-        });
+                }
+            }, new com.android.volley.Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    // if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                    VolleyLog.d("connection error", "Error: " + error.getMessage());
+                    Toast.makeText(getApplicationContext(),
+                            error.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+            routeRequest.setRetryPolicy(new DefaultRetryPolicy(40000, DefaultRetryPolicy.DEFAULT_MAX_RETRIES, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+            Volley.newRequestQueue(getBaseContext()).add(routeRequest);
+        }
     }
+
 
     private PlaceOrmDbHelper getHelper() { // DatabaseHelper getHelper() {
         if (ormDatabaseHelper == null) {
@@ -177,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return ormDatabaseHelper;
     }
+
 
     public void showRestros() throws SQLException {
 
@@ -249,11 +285,13 @@ public class MainActivity extends AppCompatActivity {
                 FetchFromDb task = new FetchFromDb();
                 task.execute();
             }
-            //showing on recycler view.
 
+            //showing on recycler view.
             //     recyclerView.setAdapter(new RestrosAdapter(data, R.layout.list_item_restro, getApplicationContext()));
 
         }
+
+
     }
 
     private class FetchFromDb extends AsyncTask<Void, Void, List<Place>> {

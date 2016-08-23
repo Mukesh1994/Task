@@ -19,12 +19,10 @@ import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
 
 
 
-public class LocationService extends IntentService implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
+public class LocationService extends IntentService implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     /**
@@ -40,18 +38,12 @@ public class LocationService extends IntentService implements OnMapReadyCallback
     public final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
     final String TAG = "Place update:";
-
-    // Keys for storing activity state in the Bundle.
-//    protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
-//    protected final static String LOCATION_KEY = "location-key";
-//    protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
     protected LocationRequest mLocationRequest;
     /**
      * ** Represents a geographical location.
      */
 
     protected android.location.Location mCurrentLocation=null;
-    Intent parentActivityIntent ;
     private GoogleApiClient mGoogleApiClient;
 
     public LocationService() {
@@ -121,129 +113,6 @@ public class LocationService extends IntentService implements OnMapReadyCallback
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-//    private String getDirectionsUrl(LatLng origin, LatLng dest) {
-//
-//        // Origin of route
-//        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-//
-//        // Destination of route
-//        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-//
-//
-//        //Sensor enabled
-//        String sensor = "sensor=false";
-//        String mode = "mode=" + Travel_Mode;
-//        Log.d("mode:", mode);
-//        // Building the parameters to the web service
-//        String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + mode;
-//        // Output format
-//        String output = "json";
-//
-//        // Building the url to the web service
-//        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
-//
-//        return url ;
-//    }
-
-//    public LatLng destination() {
-//        TimetableDb db = new TimetableDb(getApplicationContext());
-//        course = db.getACourse();
-//        LatLng destn = new LatLng(course.getLatitude(), course.getLongitude());
-//        return destn;
-//    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-
-    }
-
-
-//    public void parse(JSONObject jObject) {
-//
-//
-//        JSONArray jRoutes = null;
-//        JSONArray jLegs = null;
-//        JSONArray jSteps = null;
-//        JSONObject jDistance = null;
-//        JSONObject jDuration = null;
-//        JSONObject jtime = null;
-//        try {
-//
-//            jRoutes = jObject.getJSONArray("routes");
-//
-//            //handling error from json response...
-//
-//
-//            /** Traversing all routes */
-//            for (int i = 0; i < jRoutes.length(); i++) {
-//                jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
-//                List<HashMap<String, String>> path = new ArrayList<HashMap<String, String>>();
-//                /** Traversing all legs */
-//                for (int j = 0; j < jLegs.length(); j++) {
-//
-//                    /** Getting distance from the json data */
-//                    jDistance = ((JSONObject) jLegs.get(j)).getJSONObject("distance");
-//                    HashMap<String, String> hmDistance = new HashMap<String, String>();
-//                    hmDistance.put("distance", jDistance.getString("text"));
-//
-//                    /** Getting duration from the json data */
-//                    jDuration = ((JSONObject) jLegs.get(j)).getJSONObject("duration");
-//                    //total_time = jDuration.getDouble("val");
-//
-//                    HashMap<String, String> hmDuration = new HashMap<String, String>();
-//                    hmDuration.put("duration", jDuration.getString("text"));
-//
-//                    if (jObject.has("error_message")) {
-//                        ETA = "Google Api Query limit Exceeded";
-//                        Log.d("error", jObject.getString("error_message"));
-//                    } else
-//                        ETA = jDuration.getString("text");                          //this is what we hungry for.
-//
-////                    NotificationCompat.Builder builder =
-////                            new NotificationCompat.Builder(this)
-////                                    .setSmallIcon(R.drawable.notify)
-////                                    .setContentTitle("ETA : " + ETA)
-////                                    .setContentText("Next Class:" + course.getCourseTitle())
-////                                    .setContentInfo("at:" + course.getTime());
-//
-//
-////                    int NOTIFICATION_ID = 12345;
-////
-////                    Intent targetIntent = new Intent(this, showclass.class);
-////                    targetIntent.putExtra("URL", url);
-////                    targetIntent.putExtra("title", course.getCourseTitle());
-////                    targetIntent.putExtra("tym", course.getTimestamp());
-////                    targetIntent.putExtra("date", course.getDate());
-////                    targetIntent.putExtra("time", course.getTime());
-////                    targetIntent.putExtra("mode", Travel_Mode);
-////                    PendingIntent contentIntent = PendingIntent.getActivity(this, 0, targetIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-////                    builder.setContentIntent(contentIntent);
-////                    NotificationManager nManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-////                    nManager.notify(NOTIFICATION_ID, builder.build());
-//
-//                    Log.d(" ETA ", ETA);
-//                    Log.d(" course", course_title);
-//
-//                    /** Adding distance object to the path */
-//                    path.add(hmDistance);
-//
-//                    /** Adding duration object to the path */
-//                    path.add(hmDuration);
-//
-//                }
-//
-//
-//            }
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        } catch (Exception e) {
-//        }
-//
-//
-//    }
-
-
     public void onConnected(Bundle bundle) {
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -252,11 +121,6 @@ public class LocationService extends IntentService implements OnMapReadyCallback
 
 
         }
-
-        //while(mCurrentLocation==null)
-        //    mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-
         createLocationRequest();
         startLocationUpdates();
     }
@@ -265,7 +129,8 @@ public class LocationService extends IntentService implements OnMapReadyCallback
     public void onLocationChanged(android.location.Location location) {
 
         mCurrentLocation = location;
-        Log.d("CurrentLoc", location.getLatitude() + ", " + location.getLongitude());
+
+        Log.d(TAG,"current locn:" +location.getLatitude() + ", " + location.getLongitude());
         Log.d(TAG,String.valueOf(mCurrentLocation.getLatitude()));
         Intent i = new Intent("locnIntent");
         //Intent i = new Intent()
@@ -275,6 +140,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
         Log.d(TAG,"service stopped");
         stopLocationUpdates();
         this.stopSelf();
+
         //  LatLng origin = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
       /*
@@ -305,7 +171,7 @@ public class LocationService extends IntentService implements OnMapReadyCallback
         Log.d("Address:", fullAddress);
 
         //inserting to database
-        PlaceOpenDatabaseHelper locnOpenDatabaseHelper = new PlaceOpenDatabaseHelper(this);
+        PlaceOrmDbHelper locnOpenDatabaseHelper = new PlaceOrmDbHelper(this);
 
         // creating dao
         Dao<Place, Long> locnDao = locnOpenDatabaseHelper.getDao();
@@ -359,7 +225,6 @@ public class LocationService extends IntentService implements OnMapReadyCallback
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
-
     }
 
     @Override
@@ -371,38 +236,6 @@ public class LocationService extends IntentService implements OnMapReadyCallback
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.d(TAG, "Service Started!");
-        //parentActivityIntent = intent ;
         buildGoogleApiClient();
-        // final ResultReceiver receiver = intent.getParcelableExtra("receiver");
     }
-
- //   @Override
-//    public int onStartCommand(Intent intent, int flags, int startId) {
-//
-//
-////        receiver = new BroadcastReceiver() {
-////            @Override
-////            public void onReceive(Context context, Intent intent) {
-////                //Add current time
-////
-////                Travel_Mode = intent.getStringExtra("activity");
-////                if (Travel_Mode.equals("other"))
-////                    Travel_Mode = "driving";
-////
-////                confidence = intent.getExtras().getInt("confidence");
-////
-////            }
-////        };
-//
-//        //Filter the Intent and register broadcast receiver
-////        IntentFilter filter = new IntentFilter();
-////        filter.addAction("ImActive");
-////        registerReceiver(receiver, filter);
-//        return START_STICKY;
-//    }
-
-
-    /**
-     * A class to parse the Google Places in JSON format
-     */
 }

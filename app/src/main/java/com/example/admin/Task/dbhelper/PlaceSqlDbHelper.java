@@ -9,6 +9,7 @@ import android.util.Log;
 
 import com.example.admin.Task.dbmodel.Place;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -77,10 +78,12 @@ public class PlaceSqlDbHelper extends SQLiteOpenHelper {
 
     public List<Place> getallPlaces() {
 
-        List<Place> places = null;
+        ArrayList<Place> places = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         String query = "SELECT * FROM " + TABLE_NAME_PLACE;
         Cursor cursor = db.rawQuery(query, null);
+        Log.d("TAG", cursor.toString());
+        if (cursor.getCount() == 0) return null;
         if (cursor.moveToFirst()) {
             do {
                 Place place = new Place();

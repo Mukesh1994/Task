@@ -57,12 +57,15 @@ public class Result {
     @Expose
     private long priceLevel;
 
+    //public Result()
+
     /**
      * @return The geometry
      */
     public Geometry getGeometry() {
         return geometry;
     }
+
 
     /**
      * @param geometry The geometry
